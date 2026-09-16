@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brother's Fish POS - Sistema de Caja</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  </head>
+
+  <body>
+    <!-- OVERLAY / MODAL DE LOGIN -->
+    <div id="overlay-login" class="overlay-modal">
+      <div class="modal-card">
+        <h2>Iniciar Sesión</h2>
+        <form id="form-login">
+          <div class="form-group">
+            <label for="login-username">Usuario:</label>
+            <input
+              type="text"
+              id="login-username"
+              required
+              placeholder="Ingrese su usuario"
+            />
+          </div>
+          <div class="form-group">
+            <label for="login-password">Contraseña:</label>
+            <input
+              type="password"
+              id="login-password"
+              required
+              placeholder="••••••••"
+            />
+          </div>
+          <button type="submit" class="btn-primary">Ingresar</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- OVERLAY APERTURA DE TURNO (MANDATORIO) -->
+    <div id="overlay-apertura" class="overlay-modal" style="display: none">
+      <div class="modal-card">
+        <h2>Apertura de Turno de Caja</h2>
+        <p>Ingrese el monto inicial para habilitar la registradora.</p>
+        <form id="form-apertura-turno">
+          <div class="form-group">
+            <label for="input-monto-inicial">Fondo Inicial ($):</label>
+            <input
+              type="number"
+              id="input-monto-inicial"
+              step="0.01"
+              min="0"
+              value="0.00"
+              autofocus
+              required
+            />
+          </div>
+          <button type="submit" class="btn-primary">Iniciar Turno</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ENCABEZADO PRINCIPAL -->
+    <header id="header-principal">
+      <div class="brand">
+        <img
+          src="assets/img/Logo_BF.jpeg"
+          alt="Brother's Fish"
+          class="logo-img"
+        />
+        <h1>Brother's Fish POS</h1>
+      </div>
+      <div class="header-controls">
+        <span id="user-display" class="badge-user">Usuario: -</span>
+        <span id="indicador-turno" class="badge-turno">Turno Cerrado</span>
+        <button id="btn-cerrar-turno" class="btn-warning" style="display: none">
+          Cerrar Turno
+        </button>
+        <button id="btn-pagos" class="btn-warning">💸 Egreso Caja Chica</button>
+        <button id="btn-historial-ventas" class="btn-warning">
+          📋 Historial / Reembolsos
+        </button>
+        <button
+          id="btn-nuevo-articulo"
+          class="btn-success"
+          style="display: none"
+        >
+          + Nuevo Artículo
+        </button>
+        <button id="btn-logout" class="btn-danger" style="display: none">
+          Cerrar Sesión
+        </button>
+      </div>
+    </header>
+
+    <!-- NAVEGACIÓN PRINCIPAL -->
+    <nav id="nav-principal">
+      <button class="nav-btn active">Caja / Ventas</button>
+      <button class="nav-btn">Inventario & Lotes</button>
+      <button class="nav-btn">Analítica Predictiva</button>
+    </nav>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main id="contenedor-principal">
+      <!-- MÓDULO DE CATÁLOGO Y FILTROS -->
+      <section id="modulo-caja">
+        <div class="bar-filtros">
+          <input
+            type="text"
+            id="input-busqueda"
+            placeholder="Buscar ceviche, combinación, bebida..."
+            style="width: 100%"
+          />
+        </div>
+
+        <!-- BARRA DE CATEGORÍAS -->
+        <div
+          class="categorias-bar"
+          id="categories-bar"
+          style="display: flex; gap: 10px; margin-bottom: 15px"
+        >
+          <button class="btn-cat active" data-cat="Ceviches">Ceviches</button>
+          <button class="btn-cat" data-cat="Combos">Combos</button>
+          <button class="btn-cat" data-cat="Bebidas">Bebidas</button>
+        </div>
+
+        <!-- GRID DINÁMICO DE PRODUCTOS -->
+        <div id="grid-productos-contenedor" class="grid-productos">
+          <!-- Renderizado dinámico -->
+        </div>
+      </section>
+
+      <!-- TICKET DE COMPRA Y PROCESAMIENTO -->
+      <aside id="panel-orden-ticket">
+        <div class="ticket-header">
+          <h3>Orden de Venta</h3>
+          <span id="num-orden-consecutivo">#ORD-001</span>
+        </div>
+
+        <!-- Botón para guardar la orden abierta -->
+        <div style="margin-top: 8px">
+          <button
+            type="button"
+            id="btn-guardar-orden"
+            class="btn-warning"
+            style="width: 100%"
+          >
+            💾 Guardar Orden / Abrir Cuenta
+          </button>
+        </div>
+
+        <!-- Contenedor para cuentas pendientes -->
+        <div style="margin-top: 8px">
+          <small style="font-weight: bold">Cuentas Abiertas:</small>
+          <div
+            id="contenedor-cuentas-abiertas"
+            style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px"
+          >
+            <small>No hay cuentas abiertas</small>
+          </div>
+        </div>
+
+        <div id="lista-items-carrito" class="ticket-body">
+          <p
+            class="empty-msg"
+            style="text-align: center; color: #94a3b8; margin-top: 20px"
+          >
+            El carrito está vacío
+          </p>
+        </div>
+
+        <div class="ticket-summary">
+          <div class="row-summary">
+            <span>Subtotal</span>
+            <span id="monto-subtotal">$0.00</span>
+          </div>
+          <div class="row-summary">
+            <span>Impuesto (ITBMS)</span>
+            <span>Exento ($0.00)</span>
+          </div>
+          <div class="row-summary total-row">
+            <span>Total a Pagar</span>
+            <span id="monto-total-pagar">$0.00</span>
+          </div>
+        </div>
+
+        <!-- FORMULARIO DE PAGO -->
+        <form id="form-cobro">
+          <label
+            style="
+              font-size: 0.85rem;
+              font-weight: bold;
+              margin-top: 8px;
+              display: block;
+            "
+            >Método de Pago:</label
+          >
+          <div class="metodos-pago-grid">
+            <button
+              type="button"
+              class="btn-metodo active"
+              data-metodo="Efectivo"
+            >
+              Efectivo
+            </button>
+            <button type="button" class="btn-metodo" data-metodo="Yappy">
+              Yappy
+            </button>
+            <button type="button" class="btn-metodo" data-metodo="Tarjeta">
+              Tarjeta
+            </button>
+            <button type="button" class="btn-metodo" data-metodo="Split">
+              Dividir
+            </button>
+          </div>
+
+          <!-- CONTENEDOR PAGO DIVIDIDO -->
+          <div id="box-pago-dividido" style="display: none" class="split-box">
+            <div class="split-row">
+              <label>Efectivo:</label>
+              <input
+                type="number"
+                id="split-efectivo"
+                class="input-split"
+                step="0.01"
+                min="0"
+                value="0"
+              />
+            </div>
+            <div class="split-row">
+              <label>Yappy:</label>
+              <input
+                type="number"
+                id="split-yappy"
+                class="input-split"
+                step="0.01"
+                min="0"
+                value="0"
+              />
+            </div>
+            <div class="split-row">
+              <label>Tarjeta:</label>
+              <input
+                type="number"
+                id="split-tarjeta"
+                class="input-split"
+                step="0.01"
+                min="0"
+                value="0"
+              />
+            </div>
+            <span id="monto-restante-split" class="restante-tag"
+              >Restante: $0.00</span
+            >
+          </div>
+
+          <button type="submit" id="btn-registrar-venta" class="btn-cobrar">
+            Registrar Venta
+          </button>
+        </form>
+      </aside>
+    </main>
+
+    <!-- MODAL SELECCIÓN RÁPIDA DE PRESENTACIÓN -->
+    <div id="modal-presentaciones" class="overlay-modal" style="display: none">
+      <div
+        class="modal-card"
+        style="max-width: 400px; width: 90%; text-align: center"
+      >
+        <h2 id="modal-titulo-sabor" style="margin-bottom: 5px">
+          Seleccionar Presentación
+        </h2>
+        <p style="color: #64748b; margin-bottom: 15px; font-size: 0.9rem">
+          Elige la presentación a agregar
+        </p>
+
+        <div
+          id="grid-presentaciones-opciones"
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+          "
+        ></div>
+
+        <button
+          id="btn-cerrar-modal-presentaciones"
+          type="button"
+          class="btn-secondary"
+          style="width: 100%"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL EGRESOS / SALIDAS DE CAJA CHICA (Dto: CreateCashTransactionDto) -->
+    <div id="modal-pagos" class="overlay-modal" style="display: none">
+      <div class="modal-card">
+        <h2>Registrar Salida de Caja Chica</h2>
+        <p style="font-size: 0.85rem; color: #64748b; margin-top: 4px">
+          Registra gastos menores o compras rápidas tomadas del efectivo.
+        </p>
+
+        <form id="form-salida-caja" style="margin-top: 12px">
+          <div class="form-group">
+            <label for="monto-pago">Monto ($ USD)</label>
+            <input
+              type="number"
+              id="monto-pago"
+              step="0.01"
+              min="0.01"
+              placeholder="Ej. 2.50"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="concepto-pago">Concepto / Motivo de Salida</label>
+            <input
+              type="text"
+              id="concepto-pago"
+              placeholder="Ej. Compra de Hielo"
+              required
+              minlength="3"
+            />
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 16px">
+            <button
+              type="button"
+              id="btn-cancelar-pago"
+              class="btn-secondary"
+              style="flex: 1"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn-primary"
+              style="flex: 1; margin-top: 0"
+            >
+              Registrar Salida
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL CIERRE DE TURNO (ARQUEO & REVISIÓN) -->
+    <div id="modal-cierre-turno" class="overlay-modal" style="display: none">
+      <div class="modal-card wide">
+        <h2>Resumen de Cierre de Caja</h2>
+        <div id="cierre-resumen-contenido" class="cierre-grid">
+          <p>
+            <strong>Apertura:</strong> <span id="cierre-fecha-apertura">-</span>
+          </p>
+          <p>
+            <strong>Cierre:</strong> <span id="cierre-fecha-cierre">-</span>
+          </p>
+          <hr />
+          <p>
+            <strong>Fondo Inicial:</strong>
+            <span id="cierre-fondo-inicial">$0.00</span>
+          </p>
+          <p>
+            <strong>Ventas Brutas:</strong>
+            <span id="cierre-ventas-brutas">$0.00</span>
+          </p>
+          <p>
+            <strong>Reembolsos:</strong>
+            <span id="cierre-reembolsos">-$0.00</span>
+          </p>
+          <p>
+            <strong>Ventas Netas:</strong>
+            <span id="cierre-ventas-netas" class="highlight">$0.00</span>
+          </p>
+          <hr />
+          <p>Cobros Efectivo: <span id="cierre-cobros-efectivo">$0.00</span></p>
+          <p>Cobros Yappy: <span id="cierre-cobros-yappy">$0.00</span></p>
+          <p>Cobros Tarjeta: <span id="cierre-cobros-tarjeta">$0.00</span></p>
+          <p>Pagos / Salidas: <span id="cierre-pagos-salidas">-$0.00</span></p>
+          <hr />
+          <h3>
+            Efectivo Teórico en Caja:
+            <span id="cierre-efectivo-teorico">$0.00</span>
+          </h3>
+        </div>
+
+        <div class="form-group" style="margin-top: 15px">
+          <label for="input-efectivo-real"
+            >Efectivo Real Arqueado ($ USD):</label
+          >
+          <input
+            type="number"
+            id="input-efectivo-real"
+            step="0.01"
+            min="0"
+            placeholder="Monto total contado en caja"
+          />
+        </div>
+
+        <div
+          style="
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: flex-end;
+          "
+        >
+          <button id="btn-cancelar-cierre" type="button" class="btn-secondary">
+            ← Volver a Ventas
+          </button>
+          <button id="btn-confirmar-cierre" type="button" class="btn-danger">
+            🔒 Cerrar Turno Definitivamente
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL NUEVO ARTÍCULO -->
+    <div id="modal-nuevo-articulo" class="overlay-modal" style="display: none">
+      <div class="modal-card">
+        <h3>➕ Agregar Nuevo Producto</h3>
+        <form id="form-nuevo-articulo">
+          <div class="form-group">
+            <label>Nombre del Producto:</label>
+            <input
+              type="text"
+              id="nuevo-nombre-prod"
+              required
+              placeholder="Ej. Ceviche Especial"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Categoría:</label>
+            <select id="nueva-cat-prod">
+              <option value="Ceviches">Ceviches</option>
+              <option value="Bebidas">Bebidas</option>
+              <option value="Combos">Combos</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Precio ($):</label>
+            <input
+              type="number"
+              id="nuevo-precio-prod"
+              step="0.01"
+              min="0.01"
+              required
+              placeholder="0.00"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Stock Inicial (Unidades):</label>
+            <input
+              type="number"
+              id="nuevo-stock-prod"
+              step="1"
+              min="0"
+              required
+              placeholder="10"
+            />
+          </div>
+
+          <div style="display: flex; gap: 10px; justify-content: flex-end">
+            <button
+              type="button"
+              id="btn-cancelar-nuevo-articulo"
+              class="btn-secondary"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="btn-success">Guardar Producto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL HISTORIAL DE VENTAS Y REEMBOLSOS -->
+    <div
+      id="modal-historial-ventas"
+      class="overlay-modal"
+      style="display: none"
+    >
+      <div class="modal-card wide" style="max-width: 850px; width: 95%">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+          "
+        >
+          <h2 style="margin: 0">📋 Historial de Ventas & Reembolsos</h2>
+          <button
+            type="button"
+            class="btn-secondary"
+            onclick="$('#modal-historial-ventas').fadeOut(200)"
+          >
+            ✕ Cerrar
+          </button>
+        </div>
+
+        <div style="max-height: 400px; overflow-y: auto; margin-top: 10px">
+          <table
+            style="
+              width: 100%;
+              border-collapse: collapse;
+              text-align: left;
+              font-size: 0.9rem;
+            "
+          >
+            <thead>
+              <tr
+                style="
+                  border-bottom: 2px solid #334155;
+                  color: #94a3b8;
+                  background: #0f172a;
+                "
+              >
+                <th style="padding: 10px">N° Orden</th>
+                <th style="padding: 10px">Fecha / Hora</th>
+                <th style="padding: 10px">Método Pago</th>
+                <th style="padding: 10px">Total ($)</th>
+                <th style="padding: 10px">Estado</th>
+                <th style="padding: 10px; text-align: center">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-historial-ventas-body">
+              <tr>
+                <td
+                  colspan="6"
+                  style="text-align: center; padding: 20px; color: #64748b"
+                >
+                  Cargando historial de ventas...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL REEMBOLSO / ANULACIÓN DE FACTURA O ORDEN -->
+    <div id="modal-anular-orden" class="overlay-modal" style="display: none">
+      <div class="modal-card">
+        <h3>↩️ Procesar Reembolso</h3>
+        <p
+          style="
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 4px;
+            margin-bottom: 12px;
+          "
+        >
+          Esta acción devolverá el dinero de la orden y registrará la deducción
+          en el renglón de <strong>Reembolsos</strong> del reporte de caja.
+        </p>
+        <form id="form-anular-orden">
+          <input type="hidden" id="anular-order-id" />
+          <div class="form-group">
+            <label for="anular-motivo"
+              >Motivo de Reembolso (Obligatorio):</label
+            >
+            <textarea
+              id="anular-motivo"
+              class="form-control"
+              rows="3"
+              placeholder="Ej. Devolución por producto defectuoso, error en cobro, cliente canceló..."
+              style="
+                width: 100%;
+                border-radius: 6px;
+                padding: 8px;
+                background: #0f172a;
+                color: white;
+                border: 1px solid #334155;
+              "
+              required
+            ></textarea>
+          </div>
+          <div
+            style="
+              display: flex;
+              gap: 8px;
+              margin-top: 16px;
+              justify-content: flex-end;
+            "
+          >
+            <button
+              type="button"
+              class="btn-secondary"
+              onclick="$('#modal-anular-orden').fadeOut(200)"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="btn-danger">
+              Confirmar Reembolso
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <footer id="footer-principal">
+      <p>Cevichería Brother's Fish @2026 | Programación Web</p>
+    </footer>
+
+    <!-- Carga de Scripts en Orden: API y luego Script principal -->
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/script.js"></script>
+  </body>
+</html>
