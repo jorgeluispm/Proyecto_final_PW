@@ -381,14 +381,14 @@ $(document).ready(function () {
         if (isVoided) tr.style.opacity = "0.5";
 
         tr.innerHTML = `
-          <td style="padding: 10px; font-weight: bold;">#${orden.orderNumber || (orden.id ? orden.id.substring(0, 8) : "---")}</td>
+          <td style="padding: 10px; font-weight: bold;">${orden.invoice_number || '---'}</td>
           <td style="padding: 10px;">${horaStr}</td>
           <td style="padding: 10px;">${metodoPago}</td>
-          <td style="padding: 10px; font-weight: bold; color: ${isVoided ? "#f87171" : "#4ade80"};">
+          <td style="padding: 10px; font-weight: bold; color: ${isVoided ? "#f87171" : "#15803d"};">
             $${totalOrden.toFixed(2)}
           </td>
           <td style="padding: 10px;">
-            ${isVoided ? '<span style="color: #f87171;">Anulada</span>' : '<span style="color: #4ade80;">Completada</span>'}
+            ${isVoided ? '<span style="color: #f87171;">Anulada</span>' : '<span style="color #15803d;">Completada</span>'}
           </td>
           <td style="padding: 10px; text-align: center;">
             ${
