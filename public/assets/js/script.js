@@ -381,7 +381,7 @@ $(document).ready(function () {
         if (isVoided) tr.style.opacity = "0.5";
 
         tr.innerHTML = `
-          <td style="padding: 10px; font-weight: bold;">${orden.invoice_number || '---'}</td>
+          <td style="padding: 10px; font-weight: bold;">${orden.invoiceNumber || '---'}</td>
           <td style="padding: 10px;">${horaStr}</td>
           <td style="padding: 10px;">${metodoPago}</td>
           <td style="padding: 10px; font-weight: bold; color: ${isVoided ? "#f87171" : "#15803d"};">
