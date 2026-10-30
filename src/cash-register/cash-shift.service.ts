@@ -146,14 +146,25 @@ export class CashShiftService {
       .reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
     // 2. Sumar total de ventas completadas pagadas en EFECTIVO asociadas a este turno
+   // const cashSalesResult = await this.orderRepository
+   //   .createQueryBuilder('order')
+   //     .where('order.cash_shift_id = :shiftId', { shiftId })
+  //    .andWhere('order.payment_method = :paymentMethod', {
+  //      paymentMethod: PaymentMethod.CASH,
+  //    })
+  //    .andWhere('order.status = :status', { status: OrderStatus.COMPLETED })
+  //    .select('SUM(order.total)', 'sum')
+  //    .getRawOne();
+    //const totalCashSales = Number(cashSalesResult?.sum || 0);
+
+    // 2. Sumar directamente todo el efectivo recibido en la tabla order_payments para este turno
     const cashSalesResult = await this.orderRepository
       .createQueryBuilder('order')
+      .innerJoin('order.payments', 'payment') // Relación con la tabla order_payments
       .where('order.cash_shift_id = :shiftId', { shiftId })
-      .andWhere('order.payment_method = :paymentMethod', {
-        paymentMethod: PaymentMethod.CASH,
-      })
-      .andWhere('order.status = :status', { status: OrderStatus.COMPLETED })
-      .select('SUM(order.total)', 'sum')
+      .andWhere('UPPER(order.status) = :status', { status: 'COMPLETED' })
+      .andWhere('UPPER(payment.paymentMethod) = :paymentMethod', { paymentMethod: 'CASH' })
+      .select('SUM(payment.amount)', 'sum')
       .getRawOne();
 
     const totalCashSales = Number(cashSalesResult?.sum || 0);
