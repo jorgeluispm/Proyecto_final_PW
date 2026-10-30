@@ -157,15 +157,15 @@ export class CashShiftService {
   //    .getRawOne();
     //const totalCashSales = Number(cashSalesResult?.sum || 0);
 
-    // 2. Sumar directamente todo el efectivo recibido en la tabla order_payments para este turno
+    // 2. Sumar directamente todo el efectivo recibido en la tabla order_payments
     const cashSalesResult = await this.orderRepository
-      .createQueryBuilder('order')
-      .innerJoin('order.payments', 'payment') // Relación con la tabla order_payments
-      .where('order.cash_shift_id = :shiftId', { shiftId })
-      .andWhere('UPPER(order.status) = :status', { status: 'COMPLETED' })
-      .andWhere('UPPER(payment.paymentMethod) = :paymentMethod', { paymentMethod: 'CASH' })
-      .select('SUM(payment.amount)', 'sum')
-      .getRawOne();
+    .createQueryBuilder('order')
+    .innerJoin('order.payments', 'payment') // Relación con la tabla order_payments
+    .where('order.cash_shift_id = :shiftId', { shiftId })
+    .andWhere('order.status = :status', { status: 'COMPLETED' })
+    .andWhere('payment.paymentMethod = :paymentMethod', { paymentMethod: 'CASH' })
+    .select('SUM(payment.amount)', 'sum')
+    .getRawOne();
 
     const totalCashSales = Number(cashSalesResult?.sum || 0);
 
