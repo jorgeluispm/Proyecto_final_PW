@@ -20,71 +20,7 @@ const estadoPOS = {
   esCuentaCargada: false,
   categoriaActual: "Ceviches",
   productoSeleccionadoTemp: null,
-  productos: [
-    {
-      id: 1,
-      nombre: "Ceviche de Pescado",
-      categoria: "Ceviches",
-      precios: {
-        "3.25 oz": { variantId: 1, precio: 1.5, stock: 10 },
-        "5 oz": { variantId: 2, precio: 3.5, stock: 8 },
-        "16 oz": { variantId: 3, precio: 6.5, stock: 4 },
-        "32 oz": { variantId: 10.0, precio: 10.0, stock: 2 },
-        "1/2 Galón": { variantId: 5, precio: 15.0, stock: 1 },
-        "1 Galón": { variantId: 6, precio: 30.0, stock: 0 },
-      },
-    },
-    {
-      id: 2,
-      nombre: "Ceviche de Pulpo",
-      categoria: "Ceviches",
-      precios: {
-        "3.25 oz": { variantId: 7, precio: 1.75, stock: 5 },
-        "5 oz": { variantId: 8, precio: 3.75, stock: 3 },
-        "16 oz": { variantId: 9, precio: 11.5, stock: 2 },
-        "32 oz": { variantId: 10, precio: 14.5, stock: 0 },
-        "1/2 Galón": { variantId: 11, precio: 25.0, stock: 1 },
-        "1 Galón": { variantId: 12, precio: 50.0, stock: 1 },
-      },
-    },
-    {
-      id: 3,
-      nombre: "Ceviche de Combinación",
-      categoria: "Ceviches",
-      precios: {
-        "3.25 oz": { variantId: 13, precio: 1.75, stock: 12 },
-        "5 oz": { variantId: 14, precio: 3.75, stock: 6 },
-        "16 oz": { variantId: 15, precio: 11.5, stock: 3 },
-        "32 oz": { variantId: 16, precio: 14.5, stock: 2 },
-        "1/2 Galón": { variantId: 17, precio: 25.0, stock: 2 },
-        "1 Galón": { variantId: 18, precio: 50.0, stock: 0 },
-      },
-    },
-    {
-      id: 4,
-      nombre: "Agua",
-      categoria: "Bebidas",
-      variantId: 19,
-      precio: 1.0,
-      stock: 24,
-    },
-    {
-      id: 5,
-      nombre: "Soda",
-      categoria: "Bebidas",
-      variantId: 20,
-      precio: 1.5,
-      stock: 18,
-    },
-    {
-      id: 6,
-      nombre: "Cerveza",
-      categoria: "Bebidas",
-      variantId: 21,
-      precio: 1.5,
-      stock: 12,
-    },
-  ],
+  productos: [], // <--- Vacío para llenarse desde la BD
 };
 
 // --- SISTEMA DE NOTIFICACIONES TOAST ---
@@ -251,7 +187,49 @@ $(document).ready(function () {
           console.warn("No se pudo verificar el turno activo:", err);
           if (requiereAperturaObligatoria) $("#overlay-apertura").fadeIn();
         }
+  // --- CARGAR PRODUCTOS DESDE LA BASE DE DATOS ---
+  try {
+    if (typeof API !== "undefined" && API.products) {
+      const productosBD = await API.products.getAll();
+      
+      // Mapear la estructura de la BD al formato del POS
+      estadoPOS.productos = productosBD.map(prod => {
+        const categoriaNombre = prod.category?.name || 'Ceviches';
 
+        // Si tiene múltiples variantes (ej. Ceviches con sus tamaños)
+        if (prod.variants && prod.variants.length > 1) {
+          let preciosObj = {};
+          prod.variants.forEach(v => {
+            preciosObj[v.variantName] = {
+              variantId: v.id,
+              precio: parseFloat(v.price),
+              stock: v.stockQuantity
+            };
+          });
+          return {
+            id: prod.id,
+            nombre: prod.name,
+            categoria: categoriaNombre,
+            precios: preciosObj
+          };
+        } else {
+          // Si es un producto de variante única (ej. Bebidas o Combos simples)
+          const variant = prod.variants[0] || {};
+          return {
+            id: prod.id,
+            nombre: prod.name,
+            categoria: categoriaNombre,
+            variantId: variant.id || 1,
+            precio: parseFloat(variant.price || 0),
+            stock: variant.stockQuantity || 0
+          };
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Error al cargar inventario del servidor:", error);
+    mostrarToast("No se pudo sincronizar el inventario", "warning");
+  }
         renderizarProductos();
       } else {
         $("#overlay-login").fadeIn();
@@ -628,29 +606,16 @@ $(document).ready(function () {
     });
   });
 
-  // 1.B NUEVO ARTÍCULO (ADMIN)
-  const PIN_ADMIN = "9216";
-
+  // 1.B NUEVO ARTÍCULO (ADMIN / ROOT)
   $(document).on(
     "click",
     "#btn-nuevo-articulo, .btn-nuevo-articulo",
     function () {
-      const claveIngresada = prompt(
-        "🔒 Acción restringida para Administrador.\nIngrese la clave de autorización:",
-      );
-      if (claveIngresada === null) return;
-
-      if (claveIngresada.trim() === PIN_ADMIN) {
-        $("#modal-nuevo-articulo").css("display", "flex").hide().fadeIn(200);
-        setTimeout(function () {
-          $("#nuevo-nombre-prod").focus();
-        }, 250);
-      } else {
-        mostrarToast(
-          "Clave incorrecta. No tiene permisos de administrador",
-          "error",
-        );
-      }
+      // Abrir el modal directamente; el backend protege la ruta con los guards de roles
+      $("#modal-nuevo-articulo").css("display", "flex").hide().fadeIn(200);
+      setTimeout(function () {
+        $("#nuevo-nombre-prod").focus();
+      }, 250);
     },
   );
 
@@ -661,9 +626,10 @@ $(document).ready(function () {
 
   $("#form-nuevo-articulo").on("submit", function (e) {
     e.preventDefault();
+    const $btn = $(this).find('button[type="submit"]');
 
     const nombre = $("#nuevo-nombre-prod").val().trim();
-    const categoria = $("#nueva-cat-prod").val();
+    const categoriaNombre = $("#nueva-cat-prod").val(); // 'Ceviches', 'Bebidas', 'Combos'
     const precio = parseFloat($("#nuevo-precio-prod").val());
     const stock = parseInt($("#nuevo-stock-prod").val(), 10);
 
@@ -671,36 +637,40 @@ $(document).ready(function () {
       return mostrarToast("Complete todos los campos correctamente", "warning");
     }
 
-    const nuevoId = Date.now();
+    // Mapear el ID de categoría según la selección ('Ceviches': 1, 'Combos': 2, 'Bebidas': 3)
+    let categoryId = 1;
+    if (categoriaNombre === "Combos") categoryId = 2;
+    if (categoriaNombre === "Bebidas") categoryId = 3;
 
-    if (categoria === "Ceviches") {
-      estadoPOS.productos.push({
-        id: nuevoId,
-        nombre: nombre,
-        categoria: "Ceviches",
-        precios: {
-          "Porción General": {
-            variantId: nuevoId,
-            precio: precio,
-            stock: stock,
-          },
-        },
-      });
-    } else {
-      estadoPOS.productos.push({
-        id: nuevoId,
-        variantId: nuevoId,
-        nombre: nombre,
-        categoria: categoria,
-        precio: precio,
-        stock: stock,
-      });
-    }
+    // Armar el DTO que espera tu backend (CreateProductDto)
+    const productPayload = {
+      categoryId: categoryId,
+      name: nombre,
+      description: "Creado desde POS",
+      variants: [
+        {
+          variantName: categoriaNombre === "Ceviches" ? "Porción General" : "Estándar",
+          price: precio,
+          stockQuantity: stock,
+          isAvailable: stock > 0
+        }
+      ]
+    };
 
-    mostrarToast(`Producto "${nombre}" agregado al catálogo`, "success");
-    $("#modal-nuevo-articulo").fadeOut(200);
-    $("#form-nuevo-articulo")[0].reset();
-    renderizarProductos();
+    ejecutarConCarga($btn, async () => {
+      try {
+        await API.products.createProduct(productPayload);
+        mostrarToast(`Producto "${nombre}" creado en la base de datos`, "success");
+        
+        $("#modal-nuevo-articulo").fadeOut(200);
+        $("#form-nuevo-articulo")[0].reset();
+
+        // Recargar la página o volver a consultar los productos para refrescar la vista
+        location.reload(); 
+      } catch (error) {
+        mostrarToast(`Error al crear producto: ${error.message}`, "error");
+      }
+    });
   });
 
   // 2. SELECCIÓN DE MÉTODO DE PAGO
