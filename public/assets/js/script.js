@@ -1367,5 +1367,176 @@ $(document).ready(function () {
         }
       }
     });
-  });
+  }); 
+
+}); // <--- AQUÍ SE CIERRA CORRECTAMENTE EL $(document).ready PRINCIPAL
+
+
+// =========================================================
+// 🗂️ CONTROL DE NAVEGACIÓN ENTRE PESTAÑAS (FUERA DE READY)
+// =========================================================
+$(document).on("click", "#nav-principal .nav-btn", function () {
+  const index = $(this).index();
+
+  $("#nav-principal .nav-btn").removeClass("active");
+  $(this).addClass("active");
+
+  if (index === 0) {
+    $("#sec-inventario").hide();
+    $("#modulo-caja").fadeIn(200);
+    $("#panel-orden-ticket").fadeIn(200);
+  } else if (index === 1) {
+    const user = API.getCurrentUser();
+    const userRole = String(user?.role || "").toUpperCase();
+    const rolesAdmin = ["ADMIN", "ROOT", "ADMINISTRADOR"];
+
+    if (rolesAdmin.includes(userRole)) {
+      $("#modulo-caja").hide();
+      $("#panel-orden-ticket").hide();
+      $("#sec-inventario").fadeIn(200);
+
+      if (typeof cargarTablaInventario === "function") {
+        cargarTablaInventario();
+      }
+    } else {
+      mostrarToast("Acceso restringido a administradores", "error");
+      $("#nav-principal .nav-btn").removeClass("active");
+      $("#nav-principal .nav-btn").first().addClass("active");
+      $("#modulo-caja").fadeIn(200);
+      $("#panel-orden-ticket").fadeIn(200);
+    }
+  } else if (index === 2) {
+    mostrarToast("Módulo de Analítica en desarrollo", "info");
+    $("#nav-principal .nav-btn").removeClass("active");
+    $("#nav-principal .nav-btn").first().addClass("active");
+    $("#modulo-caja").fadeIn(200);
+    $("#panel-orden-ticket").fadeIn(200);
+  }
 });
+
+
+// =========================================================
+// 📦 GESTIÓN DE LA TABLA INTERACTIVA DE INVENTARIO
+// =========================================================
+
+async function cargarTablaInventario() {
+  const $tbody = $("#tabla-inventario-body").empty();
+  
+  $tbody.html(`
+    <tr>
+      <td colspan="6" style="text-align: center; padding: 30px; color: #94a3b8;">
+        Cargando inventario desde la base de datos...
+      </td>
+    </tr>
+  `);
+
+  try {
+    if (typeof API === "undefined" || !API.products) return;
+    const productosBD = await API.products.getAll();
+    
+    $tbody.empty();
+
+    if (!productosBD || productosBD.length === 0) {
+      $tbody.html(`
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 30px; color: #94a3b8;">
+            No hay productos registrados en el inventario.
+          </td>
+        </tr>
+      `);
+      return;
+    }
+
+    productosBD.forEach(prod => {
+      const categoriaNombre = prod.category?.name || 'Sin Categoría';
+      const productoNombre = prod.name || 'Sin Nombre';
+      const variants = prod.variants || [];
+
+      if (variants.length === 0) {
+        $tbody.append(`
+          <tr data-product-id="${prod.id}">
+            <td style="padding: 12px 16px;">${categoriaNombre}</td>
+            <td style="padding: 12px 16px; font-weight: bold;">${productoNombre}</td>
+            <td style="padding: 12px 16px; color: #94a3b8;">Estándar</td>
+            <td style="padding: 12px 16px; text-align: right;">$0.00</td>
+            <td style="padding: 12px 16px; text-align: center;">
+              <span class="badge-stock-empty">⛔ 0 ud(s)</span>
+            </td>
+            <td style="padding: 12px 16px; text-align: center;">
+              <button type="button" class="btn-inv-icon btn-inv-delete" data-id="${prod.id}" title="Eliminar producto">🗑️</button>
+            </td>
+          </tr>
+        `);
+      } else {
+        variants.forEach(v => {
+          const stock = v.stockQuantity !== undefined ? parseInt(v.stockQuantity, 10) : 0;
+          const precio = parseFloat(v.price || 0);
+          
+          let badgeHtml = '';
+          if (stock === 0) {
+            badgeHtml = `<span class="badge-stock-empty">⛔ Agotado (0)</span>`;
+          } else if (stock <= 3) {
+            badgeHtml = `<span class="badge-stock-low">⚠️ ${stock} ud(s) (Bajo)</span>`;
+          } else {
+            badgeHtml = `<span style="color: #4ade80; font-weight: bold;">${stock} ud(s)</span>`;
+          }
+
+          $tbody.append(`
+            <tr data-variant-id="${v.id}" data-product-id="${prod.id}">
+              <td style="padding: 12px 16px;">${categoriaNombre}</td>
+              <td style="padding: 12px 16px; font-weight: bold;">${productoNombre}</td>
+              <td style="padding: 12px 16px;">${v.variantName || 'Estándar'}</td>
+              <td style="padding: 12px 16px; text-align: right;">$${precio.toFixed(2)}</td>
+              <td style="padding: 12px 16px; text-align: center;">${badgeHtml}</td>
+              <td style="padding: 12px 16px; text-align: center;">
+                <button type="button" class="btn-inv-icon btn-inv-delete-variant" data-variant-id="${v.id}" title="Eliminar variante">🗑️</button>
+              </td>
+            </tr>
+          `);
+        });
+      }
+    });
+
+  } catch (error) {
+    console.error("Error al cargar la tabla de inventario:", error);
+    $tbody.html(`
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 30px; color: #ef4444;">
+          Error al cargar los datos del inventario: ${error.message}
+        </td>
+      </tr>
+    `);
+  }
+}
+
+// --- FILTROS DINÁMICOS PARA LA TABLA DE INVENTARIO ---
+$(document).on("input", "#inv-input-busqueda", function() {
+  filtrarTablaInventario();
+});
+
+$(document).on("change", "#inv-filter-categoria", function() {
+  filtrarTablaInventario();
+});
+
+function filtrarTablaInventario() {
+  const texto = $("#inv-input-busqueda").val().toLowerCase().trim();
+  const categoriaFiltro = $("#inv-filter-categoria").val();
+
+  $("#tabla-inventario-body tr").each(function() {
+    const $fila = $(this);
+    if ($fila.find("td").length <= 1) return;
+
+    const categoria = $fila.find("td:eq(0)").text().trim();
+    const producto = $fila.find("td:eq(1)").text().toLowerCase();
+    const variante = $fila.find("td:eq(2)").text().toLowerCase();
+
+    const coincideTexto = producto.includes(texto) || variante.includes(texto);
+    const coincideCat = categoriaFiltro === "TODAS" || categoria === categoriaFiltro;
+
+    if (coincideTexto && coincideCat) {
+      $fila.show();
+    } else {
+      $fila.hide();
+    }
+  });
+}
