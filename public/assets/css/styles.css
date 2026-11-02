@@ -618,3 +618,75 @@ body {
     transform: translate(-50%, -50%) rotate(1turn);
   }
 }
+
+/* --- ESTILOS DE LA TABLA DE INVENTARIO --- */
+#tabla-inventario-body tr {
+  border-bottom: 1px solid #334155;
+  transition: background-color 0.15s ease;
+}
+
+#tabla-inventario-body tr:hover {
+  background-color: #26334d;
+}
+
+/* Celdas Editables */
+.cell-editable {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s ease, outline 0.2s ease;
+}
+
+.cell-editable:hover {
+  background-color: #334155;
+  outline: 1px dashed #f97316;
+}
+
+/* ALERTA DE STOCK BAJO (≤ 3 Unidades) */
+.badge-stock-low {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid #f59e0b;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ALERTA DE STOCK AGOTADO (0 Unidades) */
+.badge-stock-empty {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid #ef4444;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Botones de Acción dentro de la Tabla */
+.btn-inv-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.btn-inv-icon:hover {
+  background: #334155;
+}
+
+.btn-inv-delete {
+  color: #ef4444;
+}
+
+.btn-inv-delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
