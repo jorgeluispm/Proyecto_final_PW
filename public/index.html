@@ -96,7 +96,7 @@
     <!-- NAVEGACIÓN PRINCIPAL -->
     <nav id="nav-principal">
       <button class="nav-btn active">Caja / Ventas</button>
-      <button class="nav-btn">Inventario & Lotes</button>
+      <button class="nav-btn" id="nav-tab-inventario">Inventario & Lotes</button>
       <button class="nav-btn">Analítica Predictiva</button>
     </nav>
 
@@ -129,7 +129,62 @@
           <!-- Renderizado dinámico -->
         </div>
       </section>
+      
+      <!-- SECCIÓN: INVENTARIO (Solo visible para ADMIN / ROOT) -->
+      <section id="sec-inventario" class="pos-section" style="display: none; padding: 20px;">
+        <!-- Barra de Herramientas del Inventario -->
+        <div class="inventory-toolbar" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+          <div style="display: flex; gap: 10px; flex: 1; min-width: 280px;">
+            <input type="text" id="inv-input-busqueda" placeholder="🔍 Buscar producto o variante..." 
+              style="flex: 1; padding: 10px 14px; background: #1e293b; color: white; border: 1px solid #334155; border-radius: 8px; font-size: 0.95rem;">
+            <select id="inv-filter-categoria" 
+              style="padding: 10px 14px; background: #1e293b; color: white; border: 1px solid #334155; border-radius: 8px; font-size: 0.95rem; cursor: pointer;">
+              <option value="TODAS">Todas las Categorías</option>
+              <option value="Ceviches">Ceviches</option>
+              <option value="Combos">Combos</option>
+              <option value="Bebidas">Bebidas</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" id="btn-crear-categoria" class="btn-inv-action" 
+              style="background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              📁 + Categoría
+            </button>
+            <button type="button" id="btn-crear-producto" class="btn-inv-action" 
+              style="background: #f97316; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              📦 + Producto
+            </button>
+            <button type="button" id="btn-crear-variante" class="btn-inv-action" 
+              style="background: #10b981; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              🏷️ + Variante
+            </button>
+          </div>
+        </div>
 
+        <!-- Contenedor de la Tabla de Inventario -->
+        <div style="background: #1e293b; border-radius: 10px; border: 1px solid #334155; overflow-x: auto; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; color: white; font-size: 0.9rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid #334155; color: #94a3b8; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">
+                <th style="padding: 14px 16px; width: 18%;">Categoría</th>
+                <th style="padding: 14px 16px; width: 22%;">Producto</th>
+                <th style="padding: 14px 16px; width: 20%;">Variante / Tamaño</th>
+                <th style="padding: 14px 16px; width: 12%; text-align: right;">Precio ($)</th>
+                <th style="padding: 14px 16px; width: 14%; text-align: center;">Stock Actual</th>
+                <th style="padding: 14px 16px; width: 14%; text-align: center;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-inventario-body">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 30px; color: #94a3b8;">
+                  Cargando inventario interactivo...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      
       <!-- TICKET DE COMPRA Y PROCESAMIENTO -->
       <aside id="panel-orden-ticket">
         <div class="ticket-header">
